@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "swiper/css";
+@import "swiper/css/pagination";
+@import "swiper/css/navigation";
+
+@layer base {
+  :root {
+    --background: 0 0% 6%;
+    --foreground: 0, 0%, 95%;
+    --card: 20 14.3% 4.1%;
+    --card-foreground: 60 9.1% 97.8%;
+    --popover: 20 14.3% 4.1%;
+    --popover-foreground: 60 9.1% 97.8%;
+    --primary: 358 53% 60%;
+    --primary-foreground: 0, 0%, 95%;
+    --secondary: 12 6.5% 15.1%;
+    --secondary-foreground: 60 9.1% 97.8%;
+    /*--muted: 12 6.5% 15.1%;*/
+    --muted: 0 0% 12%;
+    --muted-foreground: 24 5.4% 63.9%;
+    --accent: 12 6.5% 15.1%;
+    --accent-foreground: 60 9.1% 97.8%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 60 9.1% 97.8%;
+    --border: 0 0% 85%;
+    --input: 12 6.5% 15.1%;
+    --ring: 24 5.7% 82.9%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --radius: 10px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background font-default text-foreground;
+  }
+}
+
+.responsive-menu {
+  @apply fixed top-0 z-[999] h-full w-full bg-[#040405] px-6 pt-6;
+  left: -100%;
+  transition: left 0.3s ease;
+}
+
+/* Open state for the responsive-menu */
+.responsive-menu.open {
+  left: 0;
+}
+
+.live-indicator {
+  @apply h-[10px] w-[10px] rounded-full bg-primary;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.slider .swiper {
+  width: 100%;
+}
