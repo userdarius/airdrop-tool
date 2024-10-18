@@ -29,7 +29,18 @@ export default function OwnedObjectsPage() {
       const { kioskOwnerCaps, kioskIds } = await kioskClient.getOwnedKiosks({
         address,
       });
-      console.log(kioskIds);
+      console.log("Kiosk owner caps:", kioskOwnerCaps);
+      console.log("Owned Kiosks:", kioskIds);
+      
+      // kioskid is invalid for some reason
+      const res = await kioskClient.getKiosk({
+        kioskId: kioskIds[0],
+        options: {
+          withKioskFields: true, 
+          withObjects: true, 
+        },
+      });
+      console.log(res);
     } catch (error) {
       console.error("Error fetching owned kiosks:", error);
     } finally {
