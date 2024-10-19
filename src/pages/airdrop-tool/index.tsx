@@ -8,7 +8,12 @@ import { Button } from "@/components/ui/button";
 import { KioskClient, KioskTransaction, Network } from "@mysten/kiosk";
 import Head from "next/head";
 import config from "@/config";
-import { normalizeStructTag, normalizeSuiObjectId } from "@mysten/sui.js/utils";
+import {
+  isValidSuiAddress,
+  isValidSuiObjectId,
+  normalizeStructTag,
+  normalizeSuiObjectId,
+} from "@mysten/sui.js/utils";
 import { chunkArray, fetchAllDynamicFields } from "@polymedia/suitcase-core";
 import invariant from "tiny-invariant";
 import { pathOr } from "ramda";
@@ -29,17 +34,15 @@ export default function OwnedObjectsPage() {
       const { kioskOwnerCaps, kioskIds } = await kioskClient.getOwnedKiosks({
         address,
       });
-      console.log("Kiosk owner caps:", kioskOwnerCaps);
-      console.log("Owned Kiosks:", kioskIds);
-      
-      // kioskid is invalid for some reason
+
+      console.log("Owned Kiosks:", kioskOwnerCaps, kioskIds);
       const res = await kioskClient.getKiosk({
         kioskId: kioskIds[0],
         options: {
-          withKioskFields: true, 
-          withObjects: true, 
+          withObjects: true,
         },
       });
+
       console.log(res);
     } catch (error) {
       console.error("Error fetching owned kiosks:", error);

@@ -12,9 +12,11 @@ import config from "@/config";
 export const suiClient = new SuiClient({
   url: getFullnodeUrl(config.SUI_NETWORK),
 });
+
 export const kioskClient = new KioskClient({
   client: suiClient,
   network: config.SUI_NETWORK,
 });
+
 export const formatAddress = (address: string) => fa(address);
 export const useWalletKit = useWallet;
