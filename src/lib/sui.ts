@@ -1,8 +1,6 @@
 /* eslint-disable no-restricted-globals */
 /* eslint-disable no-else-return */
 /* eslint-disable prefer-template */
-/* eslint-disable import/no-extraneous-dependencies */
-// @ts-nocheck
 import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 import { KioskClient, KioskTransaction, Network } from "@mysten/kiosk";
 import { formatAddress as fa } from "@mysten/sui.js/utils";

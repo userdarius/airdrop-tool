@@ -1,5 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
-// @ts-nocheck
+/* eslint-disable react/react-in-jsx-scope */
 import { useCallback, useEffect, useState } from "react";
 import { useWalletKit, suiClient, kioskClient, formatAddress } from "@/lib/sui";
 import { set, useForm } from "react-hook-form";
@@ -23,27 +22,52 @@ import { useRouter } from "next/router";
 
 export default function OwnedObjectsPage() {
   const walletKit = useWalletKit();
-  const [ownedKiosks, setOwnedKiosks] = useState<any[]>([]);
+  const [ownedRootlets, setOwnedRootlets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  const ROOTLET_TYPE =
+    "0x8f74a7d632191e29956df3843404f22d27bd84d92cca1b1abde621d033098769::rootlet::Rootlet";
+
   const fetchOwnedKiosks = async () => {
     setIsLoading(true);
-    const address = walletKit.address;
+    const address =
+      "0x43af2f949516a90482cfab1a5b5bb94f53c87f5592a0df8ddeb651fdc393a974";
     try {
-      const { kioskOwnerCaps, kioskIds } = await kioskClient.getOwnedKiosks({
-        address,
-      });
-
-      console.log("Owned Kiosks:", kioskOwnerCaps, kioskIds);
-      const res = await kioskClient.getKiosk({
-        kioskId: kioskIds[0],
-        options: {
-          withObjects: true,
+      const { kioskIds } = await kioskClient.getOwnedKiosks({
+        address: address || "",
+        pagination: {
+          limit: 50,
         },
       });
 
-      console.log(res);
+      // Fetch the kiosk with objects that have the ROOTLET_TYPE out of all owned kiosks
+      for (const kioskId of kioskIds) {
+        const kiosk = await kioskClient.getKiosk({
+          id: kioskId.toString(),
+          options: {
+            withObjects: true,
+          },
+        });
+        console.log("Kiosk:", kiosk);
+        const objects = kiosk.items || [];
+        console.log("Objects:", objects);
+        for (const obj of objects) {
+          if (obj.type === ROOTLET_TYPE) {
+            console.log("Rootlet:", obj);
+            setOwnedRootlets((prev) => {
+              const alreadyExists = prev.some(
+                (rootlet) => rootlet.data.objectId === obj.objectId,
+              );
+              if (!alreadyExists) {
+                return [...prev, obj];
+              }
+              return prev;
+            });
+          }
+        }
+      }
+      console.log("Owned Rootlets:", ownedRootlets);
     } catch (error) {
       console.error("Error fetching owned kiosks:", error);
     } finally {
@@ -51,54 +75,29 @@ export default function OwnedObjectsPage() {
     }
   };
 
-  // Navigate to the NFT details page
-  const handleNFTClick = (objectId: string) => {
-    router.push(`/nft/index?objectId=${objectId}`);
-  };
-
-  // Filter function to get NFTs from a specific collection
-  const filterNFTCollection = (objects: any[]) => {
-    return objects.filter((obj) => obj.data.type === NFT_COLLECTION_TYPE);
-  };
-
-  const filterRootlets = (objects: any[]) => {
-    setRootletObjects(
-      objects.filter(
-        (obj) =>
-          obj.data.objectId ===
-          "0x12ed687eeba7b273e45965d7bbebf2a0f7f86917ac3c904f596a3f01033d9551",
-      ),
-    );
-    return objects.filter(
-      (obj) =>
-        obj.data.objectId ===
-        "0x12ed687eeba7b273e45965d7bbebf2a0f7f86917ac3c904f596a3f01033d9551",
-    );
-  };
-
   return (
     <div className="container mx-auto p-4">
       <Head>
-        <title>Owned Objects</title>
+        <title>Owned Rootlets</title>
       </Head>
-      <h1 className="mb-4 text-2xl font-bold">Owned Objects</h1>
+      <h1 className="mb-4 text-2xl font-bold">Owned Rootlets</h1>
       <div className="mb-4 flex gap-4">
-        {ownedKiosks.length == 0 && (
+        {ownedRootlets.length == 0 && (
           <Button onClick={fetchOwnedKiosks} disabled={isLoading}>
-            {isLoading ? "Loading..." : "Get Owned Objects"}
+            {isLoading ? "Loading..." : "Get Owned Rootlets"}
           </Button>
         )}
-        {ownedKiosks.length > 0 && (
+        {ownedRootlets.length > 0 && (
           <Button onClick={fetchOwnedKiosks} disabled={isLoading}>
             {isLoading ? "Loading..." : "Refresh"}
           </Button>
         )}
       </div>
-      {ownedKiosks.length > 0 && (
+      {ownedRootlets.length > 0 && (
         <div className="mt-4">
           <h2 className="mb-2 text-xl font-semibold">Object List:</h2>
           <ul className="list-disc pl-5">
-            {ownedKiosks.map((obj, index) => (
+            {ownedRootlets.map((obj, index) => (
               <li key={obj.data.objectId} className="mb-2">
                 <strong>Object {index + 1}:</strong> {obj.data.objectId}
                 <br />
