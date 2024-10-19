@@ -12,13 +12,15 @@ export default function OwnedObjectsPage() {
   const [ownedRootlets, setOwnedRootlets] = useState<any[]>([]);
   const [rootletMetadata, setRootletMetadata] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedObject, setSelectedObject] = useState<any>(null);
   const router = useRouter();
 
   const ROOTLET_TYPE =
     "0x8f74a7d632191e29956df3843404f22d27bd84d92cca1b1abde621d033098769::rootlet::Rootlet";
 
-  const getMetadata = async (nfts) => {
-    const metadataList: SuiObjectResponse[] = []; // Temporary array to store metadata
+  const getMetadata = async (nfts: KioskItem[]) => {
+    const metadataList: SuiObjectResponse[] = [];
 
     for (const nft of nfts) {
       const metadata = await suiClient.getObject({
@@ -28,15 +30,12 @@ export default function OwnedObjectsPage() {
         },
       });
 
-      // Add each metadata result to the temporary array
       metadataList.push(metadata);
     }
 
-    // Update state once after all metadata is fetched
     setRootletMetadata((prev) => [...prev, ...metadataList]);
   };
 
-  // Track changes to rootletMetadata and log it
   useEffect(() => {
     if (rootletMetadata.length > 0) {
       console.log("Rootlet Metadata updated:", rootletMetadata);
@@ -57,7 +56,6 @@ export default function OwnedObjectsPage() {
 
       const newRootlets: KioskItem[] = [];
 
-      // Fetch the kiosk with objects that have the ROOTLET_TYPE out of all owned kiosks
       for (const kioskId of kioskIds) {
         const kiosk = await kioskClient.getKiosk({
           id: kioskId.toString(),
@@ -68,7 +66,6 @@ export default function OwnedObjectsPage() {
         const objects = kiosk.items || [];
         for (const obj of objects) {
           if (obj.type === ROOTLET_TYPE) {
-            // Only add new unique objects
             const alreadyExists = ownedRootlets.some(
               (rootlet) => rootlet.data.objectId === obj.objectId,
             );
@@ -79,7 +76,6 @@ export default function OwnedObjectsPage() {
         }
       }
 
-      // Update state after all rootlets are fetched
       setOwnedRootlets((prev) => [...prev, ...newRootlets]);
       getMetadata(newRootlets);
     } catch (error) {
@@ -89,7 +85,16 @@ export default function OwnedObjectsPage() {
     }
   };
 
-  // Track changes to ownedRootlets
+  const openModal = (obj: any) => {
+    setSelectedObject(obj);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedObject(null);
+  };
+
   useEffect(() => {
     if (ownedRootlets.length > 0) {
       console.log("Owned Rootlets updated:", ownedRootlets);
@@ -103,7 +108,7 @@ export default function OwnedObjectsPage() {
       </Head>
       <h1 className="mb-4 text-2xl font-bold">Owned Rootlets</h1>
       <div className="mb-4 flex gap-4">
-        {ownedRootlets.length == 0 && (
+        {ownedRootlets.length === 0 && (
           <Button onClick={fetchOwnedRootlets} disabled={isLoading}>
             {isLoading ? "Loading..." : "Get Owned Rootlets"}
           </Button>
@@ -117,17 +122,45 @@ export default function OwnedObjectsPage() {
       {ownedRootlets.length > 0 && (
         <div className="mt-4">
           <h2 className="mb-2 text-xl font-semibold">Object List:</h2>
-          <ul className="list-disc pl-5">
+          <div className="grid grid-cols-1 gap-4">
             {ownedRootlets.map((obj, index) => (
-              <li key={obj.data.objectId} className="mb-2">
+              <div
+                key={obj.data.objectId}
+                className="bg-grey-100 cursor-pointer rounded-md border border-gray-300 p-4 shadow-md"
+                onClick={() => openModal(obj)}
+              >
                 <strong>Object {index + 1}:</strong> {obj.data.objectId}
                 <br />
                 <span className="text-sm text-gray-600">
                   Digest: {obj.data.digest}
                 </span>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
+        </div>
+      )}
+
+      {modalVisible && selectedObject && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-1/2 rounded-lg bg-white p-6 shadow-lg">
+            <h2 className="mb-4 text-xl font-bold text-black">
+              Object Details
+            </h2>
+            <p>
+              <strong className="text-black">Object ID:</strong>
+              <span className="block w-full truncate text-black">
+                {" "}
+                {selectedObject.data.objectId}
+              </span>
+            </p>
+            <p>
+              <strong className="text-black">Digest:</strong>
+              <span className="text-black"> {selectedObject.data.digest}</span>
+            </p>
+            <div className="mt-4">
+              <Button onClick={closeModal}>Close</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
