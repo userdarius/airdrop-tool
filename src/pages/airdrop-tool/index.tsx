@@ -108,27 +108,32 @@ export default function OwnedObjectsPage() {
       </Head>
       <h1 className="mb-4 text-2xl font-bold">Owned Rootlets</h1>
       <div className="mb-4 flex gap-4">
-        {ownedRootlets.length === 0 && (
+        {rootletMetadata.length === 0 && (
           <Button onClick={fetchOwnedRootlets} disabled={isLoading}>
             {isLoading ? "Loading..." : "Get Owned Rootlets"}
           </Button>
         )}
-        {ownedRootlets.length > 0 && (
+        {rootletMetadata.length > 0 && (
           <Button onClick={fetchOwnedRootlets} disabled={isLoading}>
             {isLoading ? "Loading..." : "Refresh"}
           </Button>
         )}
       </div>
-      {ownedRootlets.length > 0 && (
+      {rootletMetadata.length > 0 && (
         <div className="mt-4">
-          <h2 className="mb-2 text-xl font-semibold">Object List:</h2>
+          <h2 className="mb-2 text-xl font-semibold">Your Rootlets:</h2>
           <div className="grid grid-cols-1 gap-4">
-            {ownedRootlets.map((obj, index) => (
+            {rootletMetadata.map((obj, index) => (
               <div
                 key={obj.data.objectId}
                 className="bg-grey-100 cursor-pointer rounded-md border border-gray-300 p-4 shadow-md"
                 onClick={() => openModal(obj)}
               >
+                <img
+                  src={obj.data.content.fields.image_url}
+                  alt="Rootlet"
+                  className="h-24 w-24 rounded-md mb-2"
+                />
                 <strong>Object {index + 1}:</strong> {obj.data.objectId}
                 <br />
                 <span className="text-sm text-gray-600">
@@ -143,6 +148,14 @@ export default function OwnedObjectsPage() {
       {modalVisible && selectedObject && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-1/2 rounded-lg bg-white p-6 shadow-lg">
+            <div className="flex justify-end mb-5">
+              <img
+                src={selectedObject.data.content.fields.image_url}
+                alt="Rootlet"
+                className="h-30 w-30 rounded-md"
+              />
+            </div>
+
             <h2 className="mb-4 text-xl font-bold text-black">
               Object Details
             </h2>
