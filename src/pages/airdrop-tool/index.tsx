@@ -1,18 +1,47 @@
+/* eslint-disable react/react-in-jsx-scope */
 import { useCallback, useEffect, useState } from "react";
-import { useWalletKit, kioskClient } from "@/lib/sui";
+import { useWalletKit, kioskClient, suiClient } from "@/lib/sui";
 import { Button } from "@/components/ui/button";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { KioskItem } from "@mysten/kiosk";
+import { SuiObjectResponse } from "@mysten/sui/client";
 
 export default function OwnedObjectsPage() {
   const walletKit = useWalletKit();
   const [ownedRootlets, setOwnedRootlets] = useState<any[]>([]);
+  const [rootletMetadata, setRootletMetadata] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const ROOTLET_TYPE =
     "0x8f74a7d632191e29956df3843404f22d27bd84d92cca1b1abde621d033098769::rootlet::Rootlet";
+
+  const getMetadata = async (nfts) => {
+    const metadataList: SuiObjectResponse[] = []; // Temporary array to store metadata
+
+    for (const nft of nfts) {
+      const metadata = await suiClient.getObject({
+        id: nft.objectId,
+        options: {
+          showContent: true,
+        },
+      });
+
+      // Add each metadata result to the temporary array
+      metadataList.push(metadata);
+    }
+
+    // Update state once after all metadata is fetched
+    setRootletMetadata((prev) => [...prev, ...metadataList]);
+  };
+
+  // Track changes to rootletMetadata and log it
+  useEffect(() => {
+    if (rootletMetadata.length > 0) {
+      console.log("Rootlet Metadata updated:", rootletMetadata);
+    }
+  }, [rootletMetadata]);
 
   const fetchOwnedRootlets = async () => {
     setIsLoading(true);
@@ -39,10 +68,9 @@ export default function OwnedObjectsPage() {
         const objects = kiosk.items || [];
         for (const obj of objects) {
           if (obj.type === ROOTLET_TYPE) {
-            console.log("Rootlet:", obj);
             // Only add new unique objects
             const alreadyExists = ownedRootlets.some(
-              (rootlet) => rootlet.data.objectId === obj.objectId
+              (rootlet) => rootlet.data.objectId === obj.objectId,
             );
             if (!alreadyExists) {
               newRootlets.push(obj);
@@ -53,6 +81,7 @@ export default function OwnedObjectsPage() {
 
       // Update state after all rootlets are fetched
       setOwnedRootlets((prev) => [...prev, ...newRootlets]);
+      getMetadata(newRootlets);
     } catch (error) {
       console.error("Error fetching owned Rootlets:", error);
     } finally {
