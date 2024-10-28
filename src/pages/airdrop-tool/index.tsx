@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { KioskItem } from "@mysten/kiosk";
+import { Transaction } from "@mysten/sui/transactions";
 import { SuiObjectResponse } from "@mysten/sui/client";
 
 export default function OwnedObjectsPage() {
@@ -15,10 +16,25 @@ export default function OwnedObjectsPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedObject, setSelectedObject] = useState<any>(null);
   const router = useRouter();
+  const tx = new Transaction(); // construct transaction
 
   const ROOTLET_TYPE =
     "0x8f74a7d632191e29956df3843404f22d27bd84d92cca1b1abde621d033098769::rootlet::Rootlet";
+  
+  // Move function to call
+  /*public fun receive_obj<T: key + store>(
+      rootlet: &mut Rootlet,
+      obj_to_receive: Receiving<T>,
+  ): T {
+      transfer::public_receive(rootlet.uid_mut(), obj_to_receive)
+  }*/
 
+  // const receiveTokens = async (rootletId: string, objToReceive: any) => {
+  //   tx.moveCall({ package: "0x8f74a7d632191e29956df3843404f22d27bd84d92cca1b1abde621d033098769", module: "rootlet", function: "receive_obj", arguments: [rootletId, objToReceive] });
+    
+  // }
+
+  
   const getMetadata = async (nfts: KioskItem[]) => {
     const metadataList: SuiObjectResponse[] = [];
 
