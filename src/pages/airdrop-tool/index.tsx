@@ -20,7 +20,7 @@ export default function OwnedObjectsPage() {
 
   const ROOTLET_TYPE =
     "0x8f74a7d632191e29956df3843404f22d27bd84d92cca1b1abde621d033098769::rootlet::Rootlet";
-  
+
   // Move function to call
   /*public fun receive_obj<T: key + store>(
       rootlet: &mut Rootlet,
@@ -31,10 +31,11 @@ export default function OwnedObjectsPage() {
 
   // const receiveTokens = async (rootletId: string, objToReceive: any) => {
   //   tx.moveCall({ package: "0x8f74a7d632191e29956df3843404f22d27bd84d92cca1b1abde621d033098769", module: "rootlet", function: "receive_obj", arguments: [rootletId, objToReceive] });
-    
+
   // }
 
-  
+  const receiveAll = async () => {};
+
   const getMetadata = async (nfts: KioskItem[]) => {
     const metadataList: SuiObjectResponse[] = [];
 
@@ -138,23 +139,26 @@ export default function OwnedObjectsPage() {
       {rootletMetadata.length > 0 && (
         <div className="mt-4">
           <h2 className="mb-2 text-xl font-semibold">Your Rootlets:</h2>
-          <div className="grid grid-cols-1 gap-4">
+        
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {rootletMetadata.map((obj, index) => (
               <div
                 key={obj.data.objectId}
-                className="bg-grey-100 cursor-pointer rounded-md border border-gray-300 p-4 shadow-md"
+                className="transform cursor-pointer rounded-lg border border-gray-600 bg-gray-800 p-4 shadow-lg transition duration-200 hover:scale-105"
                 onClick={() => openModal(obj)}
               >
                 <img
                   src={obj.data.content.fields.image_url}
                   alt="Rootlet"
-                  className="h-24 w-24 rounded-md mb-2"
+                  className="mb-2 h-48 w-full rounded-lg object-cover"
                 />
-                <strong>Object {index + 1}:</strong> {obj.data.objectId}
-                <br />
-                <span className="text-sm text-gray-600">
-                  Digest: {obj.data.digest}
-                </span>
+                <div className="text-center truncate">
+                  <strong>Object {index + 1}:</strong> {obj.data.objectId}
+                  <br />
+                  <span className="text-sm text-gray-400 truncate">
+                    Digest: {obj.data.digest}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
@@ -164,7 +168,7 @@ export default function OwnedObjectsPage() {
       {modalVisible && selectedObject && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-1/2 rounded-lg bg-white p-6 shadow-lg">
-            <div className="flex justify-end mb-5">
+            <div className="mb-5 flex justify-center">
               <img
                 src={selectedObject.data.content.fields.image_url}
                 alt="Rootlet"
