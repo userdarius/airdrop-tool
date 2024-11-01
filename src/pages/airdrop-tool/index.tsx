@@ -226,7 +226,7 @@ export default function OwnedObjectsPage() {
               </strong>
               <span className="block w-full truncate text-black">
                 {ownedObjects.length > 0
-                  ? ownedObjects.map((obj) => obj.objectId).join(", ")
+                  ? ownedObjects.map((obj) => obj.data.type).join(", ")
                   : "Nothing found."}
               </span>
             </p>
