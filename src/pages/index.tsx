@@ -1,3 +1,4 @@
+/* eslint-disable react/react-in-jsx-scope */
 import { RootletsLogo } from "@/components/icons/rootlets-logo";
 import Link from "next/link";
 import Image from "next/image";

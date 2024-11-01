@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import { KioskItem } from "@mysten/kiosk";
 import { Transaction } from "@mysten/sui/transactions";
 import { SuiObjectResponse } from "@mysten/sui/client";
+import { Keypair } from "@mysten/sui/cryptography";
 
 export default function OwnedObjectsPage() {
   const walletKit = useWalletKit();
@@ -15,6 +16,7 @@ export default function OwnedObjectsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedObject, setSelectedObject] = useState<any>(null);
+  const [ownedObjects, setOwnedObjects] = useState<any[]>([]);
   const router = useRouter();
   const tx = new Transaction(); // construct transaction
 
@@ -29,12 +31,42 @@ export default function OwnedObjectsPage() {
       transfer::public_receive(rootlet.uid_mut(), obj_to_receive)
   }*/
 
-  // const receiveTokens = async (rootletId: string, objToReceive: any) => {
-  //   tx.moveCall({ package: "0x8f74a7d632191e29956df3843404f22d27bd84d92cca1b1abde621d033098769", module: "rootlet", function: "receive_obj", arguments: [rootletId, objToReceive] });
+  const receiveTokens = async (rootletId: string, objToReceive: any) => {
+    try {
+      console.log("Receiving object:", objToReceive);
+      console.log("Rootlet ID:", rootletId);
+      tx.moveCall({
+        target:
+          "0x8f74a7d632191e29956df3843404f22d27bd84d92cca1b1abde621d033098769::rootlet::receive_obj",
+        arguments: [tx.object(rootletId), tx.object(objToReceive)],
+      });
 
-  // }
+      await walletKit.signAndExecuteTransaction({ transaction: tx });
+    } catch (error) {
+      console.error("Error receiving object:", error);
+    }
+  };
 
-  const receiveAll = async () => {};
+  const getOwnedObjectsFromNFT = async (obj: any) => {
+    console.log("Fetching owned objects for NFT:", obj.data.objectId);
+    const response = await suiClient.getOwnedObjects({
+      owner: obj.data.objectId,
+      options: {
+        showContent: true,
+        showType: true,
+        showBcs: true,
+      },
+    });
+    console.log("Owned objects for NFT:", response);
+    setOwnedObjects(response.data);
+
+    // Set an empty message if no objects are owned
+    if (response.data.length === 0) {
+      setOwnedObjects([{ objectId: "Nothing found." }]);
+    }
+  };
+
+  // const receiveAll = async () => {};
 
   const getMetadata = async (nfts: KioskItem[]) => {
     const metadataList: SuiObjectResponse[] = [];
@@ -44,6 +76,8 @@ export default function OwnedObjectsPage() {
         id: nft.objectId,
         options: {
           showContent: true,
+          showType: true,
+          showBcs: true,
         },
       });
 
@@ -61,8 +95,8 @@ export default function OwnedObjectsPage() {
 
   const fetchOwnedRootlets = async () => {
     setIsLoading(true);
-    const address =
-      "0x43af2f949516a90482cfab1a5b5bb94f53c87f5592a0df8ddeb651fdc393a974";
+    const address = walletKit.address; // change this to walletKit.address in prod
+    console.log("Fetching owned Rootlets for address:", address);
     try {
       const { kioskIds } = await kioskClient.getOwnedKiosks({
         address: address || "",
@@ -102,14 +136,18 @@ export default function OwnedObjectsPage() {
     }
   };
 
-  const openModal = (obj: any) => {
+  const openModal = async (obj: any) => {
+    console.log("Opening modal for object:", obj);
     setSelectedObject(obj);
     setModalVisible(true);
+    // Fetch owned objects associated with this NFT when modal opens
+    await getOwnedObjectsFromNFT(obj);
   };
 
   const closeModal = () => {
     setModalVisible(false);
     setSelectedObject(null);
+    setOwnedObjects([]); // Reset owned objects when modal closes
   };
 
   useEffect(() => {
@@ -121,13 +159,15 @@ export default function OwnedObjectsPage() {
   return (
     <div className="container mx-auto p-4">
       <Head>
-        <title>Owned Rootlets</title>
+        <title>Rootlets airdrop tool</title>
       </Head>
-      <h1 className="mb-4 text-2xl font-bold">Owned Rootlets</h1>
+      <h1 className="mb-4 text-2xl font-bold">
+        Claim airdrops sent to your Rootlets
+      </h1>
       <div className="mb-4 flex gap-4">
         {rootletMetadata.length === 0 && (
           <Button onClick={fetchOwnedRootlets} disabled={isLoading}>
-            {isLoading ? "Loading..." : "Get Owned Rootlets"}
+            {isLoading ? "Loading..." : "Show my Rootlets"}
           </Button>
         )}
         {rootletMetadata.length > 0 && (
@@ -136,10 +176,10 @@ export default function OwnedObjectsPage() {
           </Button>
         )}
       </div>
-      {rootletMetadata.length > 0 && (
+
+      {rootletMetadata.length > 0 ? (
         <div className="mt-4">
           <h2 className="mb-2 text-xl font-semibold">Your Rootlets:</h2>
-        
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {rootletMetadata.map((obj, index) => (
               <div
@@ -152,10 +192,10 @@ export default function OwnedObjectsPage() {
                   alt="Rootlet"
                   className="mb-2 h-48 w-full rounded-lg object-cover"
                 />
-                <div className="text-center truncate">
+                <div className="truncate text-center">
                   <strong>Object {index + 1}:</strong> {obj.data.objectId}
                   <br />
-                  <span className="text-sm text-gray-400 truncate">
+                  <span className="truncate text-sm text-gray-400">
                     Digest: {obj.data.digest}
                   </span>
                 </div>
@@ -163,11 +203,13 @@ export default function OwnedObjectsPage() {
             ))}
           </div>
         </div>
+      ) : (
+        <div className="mt-4 text-center text-gray-400">No rootlets found.</div>
       )}
 
       {modalVisible && selectedObject && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-1/2 rounded-lg bg-white p-6 shadow-lg">
+          <div className="max-h-[80vh] w-1/2 overflow-y-auto rounded-lg bg-white p-6 shadow-lg">
             <div className="mb-5 flex justify-center">
               <img
                 src={selectedObject.data.content.fields.image_url}
@@ -176,22 +218,77 @@ export default function OwnedObjectsPage() {
               />
             </div>
 
-            <h2 className="mb-4 text-xl font-bold text-black">
-              Object Details
-            </h2>
+            <h2 className="mb-4 text-xl font-bold text-black">NFT Details</h2>
+
+            <p>
+              <strong className="text-black">
+                This NFT owns the following:
+              </strong>
+              <span className="block w-full truncate text-black">
+                {ownedObjects.length > 0
+                  ? ownedObjects.map((obj) => obj.objectId).join(", ")
+                  : "Nothing found."}
+              </span>
+            </p>
+
             <p>
               <strong className="text-black">Object ID:</strong>
               <span className="block w-full truncate text-black">
-                {" "}
                 {selectedObject.data.objectId}
               </span>
             </p>
             <p>
               <strong className="text-black">Digest:</strong>
-              <span className="text-black"> {selectedObject.data.digest}</span>
+              <span className="block w-full truncate text-black">
+                {selectedObject.data.digest}
+              </span>
             </p>
-            <div className="mt-4">
-              <Button onClick={closeModal}>Close</Button>
+
+            <h3 className="mb-2 mt-4 text-lg font-semibold text-black">
+              Metadata
+            </h3>
+            <table className="w-full border-collapse border border-black text-left text-black">
+              <thead>
+                <tr>
+                  <th className="border border-black p-2">Attribute</th>
+                  <th className="border border-black p-2">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedObject.data.content.fields.attributes.fields.contents.map(
+                  (
+                    attribute: { fields: { key: string; value: string } },
+                    idx: number,
+                  ) => (
+                    <tr key={idx}>
+                      <td className="border border-black p-2">
+                        {attribute.fields.key}
+                      </td>
+                      <td className="border border-black p-2">
+                        {attribute.fields.value}
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+
+            <div className="mt-4 flex justify-center">
+              <div className="mr-4 mt-4">
+                <Button
+                  onClick={() =>
+                    receiveTokens(
+                      selectedObject.data.objectId,
+                      selectedObject.data,
+                    )
+                  }
+                >
+                  Claim airdrops
+                </Button>
+              </div>
+              <div className="mt-4">
+                <Button onClick={closeModal}>Close</Button>
+              </div>
             </div>
           </div>
         </div>
