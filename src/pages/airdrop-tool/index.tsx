@@ -7,8 +7,10 @@ import { KioskItem } from "@mysten/kiosk";
 import {
   Transaction,
   TransactionObjectArgument,
+  TransactionResult,
 } from "@mysten/sui/transactions";
 import { SuiObjectResponse } from "@mysten/sui/client";
+import { bcs } from "@mysten/sui/bcs";
 
 export default function OwnedObjectsPage() {
   const walletKit = useWalletKit();
@@ -30,9 +32,6 @@ export default function OwnedObjectsPage() {
 
   const ROOTLET_TYPE =
     "0x8f74a7d632191e29956df3843404f22d27bd84d92cca1b1abde621d033098769::rootlet::Rootlet";
-
-  const KIOSK_PACKAGE_ID =
-    "0x34cc6762780f4f6f153c924c0680cfe2a1fb4601e7d33cc28a92297b62de1e0e";
 
   // Helper functions for fetching kiosk information
 
@@ -103,11 +102,6 @@ export default function OwnedObjectsPage() {
           kioskOwnerCapObjectIdsWithRootlets.push(kioskOwnerCap.objectId);
         }
       }
-
-      console.log(
-        "KioskOwnerCaps with Rootlets:",
-        kioskOwnerCapObjectIdsWithRootlets,
-      );
       return kioskOwnerCapObjectIdsWithRootlets;
     } catch (error) {
       console.error(
@@ -118,67 +112,20 @@ export default function OwnedObjectsPage() {
     }
   };
 
-  // Move function to call
-  /*public fun receive_obj<T: key + store>(
-      rootlet: &mut Rootlet,
-      obj_to_receive: Receiving<T>,
-  ): T {
-      transfer::public_receive(rootlet.uid_mut(), obj_to_receive)
-  }*/
-
-
-  // TODO: Need to match the rootletId to the object ID of the rootlet stored in ownedRootlets
-  const receiveTokens = async (rootletId: string, objToReceive: any) => {
-    console.log("Receiving tokens for object:", objToReceive);
-    // create NFT object
-    for (const rootlet of ownedRootlets) {
-      const kioskcapid = await fetchKioskOwnerCapObjectIdsWithRootlets();
-      for (const kioskcap of kioskcapid) {
-        console.log("Kiosk cap id:", kioskcap);
-        const nft: NFT = {
-          id: rootlet.objectId,
-          owner: {
-            kiosk_id: rootlet.kioskId,
-            personal_kiosk_cap_id: kioskcap,
-          },
-        };
-
-        const [
-          kioskOwnerCap,
-          returnKioskOwnerCapPromise,
-          borrowedNft,
-          returnNftPromise,
-        ] = borrowRootletFromKiosk(nft, tx);
-
-        returnRootletToKiosk(
-          nft,
-          kioskOwnerCap,
-          returnKioskOwnerCapPromise,
-          borrowedNft,
-          returnNftPromise,
-          tx,
-        );
-      }
-      try {
-        console.log("Receiving object:", objToReceive);
-        console.log("Rootlet ID:", rootletId);
-        tx.moveCall({
-          target:
-            "0x3d8d36f1207c5cccfd9e3b25fa830231da282a03b2874b3737096833aa72edd2::rootlet::receive_obj",
-          arguments: [tx.object(rootletId), tx.object(objToReceive)],
-        });
-
-        await walletKit.signAndExecuteTransaction({ transaction: tx });
-      } catch (error) {
-        console.error("Error receiving object:", error);
-      }
-    }
-  };
-
+  /**
+   * Borrow a Rootlet from a Kiosk.
+   * @param nft The NFT object to borrow.
+   * @param tx The transaction object.
+   * @returns {TransactionObjectArgument[]} The result of the transactions.
+   */
   function borrowRootletFromKiosk(nft: NFT, tx: Transaction) {
+    const personal_kiosk_package_id = kioskClient.getRulePackageId(
+      "personalKioskRulePackageId",
+    );
+
     const [kioskOwnerCap, returnKioskOwnerCapPromise] = tx.moveCall({
-      target: `${KIOSK_PACKAGE_ID}::personal_kiosk::borrow_val`,
-      arguments: [tx.object(nft.owner.personal_kiosk_cap_id as string)],
+      target: `${personal_kiosk_package_id}::personal_kiosk::borrow_val`,
+      arguments: [tx.object(nft.owner.personal_kiosk_cap_id)],
     });
 
     const [borrowedNft, returnNftPromise] = tx.moveCall({
@@ -207,6 +154,9 @@ export default function OwnedObjectsPage() {
     returnNftPromise: TransactionObjectArgument,
     tx: Transaction,
   ) {
+    const personal_kiosk_package_id = kioskClient.getRulePackageId(
+      "personalKioskRulePackageId",
+    );
     tx.moveCall({
       target: "0x2::kiosk::return_val",
       arguments: [tx.object(nft.owner.kiosk_id), borrowedNft, returnNftPromise], // still need to create the nft object
@@ -214,9 +164,8 @@ export default function OwnedObjectsPage() {
     });
 
     if (nft.owner.personal_kiosk_cap_id) {
-      console.log("LFG!");
       tx.moveCall({
-        target:`${KIOSK_PACKAGE_ID}::personal_kiosk::borrow_val`,
+        target: `${personal_kiosk_package_id}::personal_kiosk::borrow_val`,
         arguments: [
           tx.object(nft.owner.personal_kiosk_cap_id as string),
           kioskOwnerCap,
@@ -226,8 +175,68 @@ export default function OwnedObjectsPage() {
     }
   }
 
+  // Move function to call
+  /*public fun receive_obj<T: key + store>(
+      rootlet: &mut Rootlet,
+      obj_to_receive: Receiving<T>,
+  ): T {
+      transfer::public_receive(rootlet.uid_mut(), obj_to_receive)
+  }*/
+
+  // TODO: Need to match the rootletId to the object ID of the rootlet stored in ownedRootlets
+  const receiveTokens = async (rootletId: string, objToReceive: any) => {
+    // create NFT object and borrow from kiosk
+    for (const rootlet of ownedRootlets) {
+      if (rootlet.data.objectId !== rootletId) {
+        continue;
+      }
+      const kioskcapids = await fetchKioskOwnerCapObjectIdsWithRootlets();
+
+      for (const kioskcapid of kioskcapids) {
+        const nft: NFT = {
+          id: rootletId,
+          owner: {
+            kiosk_id: rootlet.kioskId,
+            personal_kiosk_cap_id: kioskcapid,
+          },
+        };
+        console.log("NFT:", nft);
+        const [
+          kioskOwnerCap,
+          returnKioskOwnerCapPromise,
+          borrowedNft,
+          returnNftPromise,
+        ] = borrowRootletFromKiosk(nft, tx);
+
+        returnRootletToKiosk(
+          nft,
+          kioskOwnerCap,
+          returnKioskOwnerCapPromise,
+          borrowedNft,
+          returnNftPromise,
+          tx,
+        );
+      }
+      try {
+        // console.log("Receiving object:", objToReceive);
+        // console.log("Rootlet ID:", rootletId);
+        // tx.moveCall({
+        //   target:
+        //     "0x3d8d36f1207c5cccfd9e3b25fa830231da282a03b2874b3737096833aa72edd2::rootlet::receive_obj",
+        //   arguments: [tx.object(rootletId), tx.object(objToReceive)],
+        // });
+        console.log("Final transaction data:", tx.getData());
+
+
+        //await suiClient.signAndExecuteTransaction({ transaction: tx });
+        await walletKit.signAndExecuteTransaction({ transaction: tx });
+      } catch (error) {
+        console.error("Error receiving object:", error);
+      }
+    }
+  };
+
   const getOwnedObjectsFromNFT = async (obj: any) => {
-    console.log("Fetching owned objects for NFT:", obj.data.objectId);
     try {
       const response = await suiClient.getOwnedObjects({
         owner: obj.data.objectId,
@@ -238,7 +247,6 @@ export default function OwnedObjectsPage() {
         },
       });
 
-      console.log("Owned objects for NFT:", response);
       setOwnedObjects(response.data);
 
       // Set an empty message if no objects are owned
@@ -285,8 +293,6 @@ export default function OwnedObjectsPage() {
     setIsLoading(true);
     try {
       const kioskIds = await fetchKioskIds();
-      console.log("Fetched owned Kiosk IDs:", kioskIds);
-
       const newRootlets: KioskItem[] = [];
 
       for (const kioskId of kioskIds || []) {
@@ -319,7 +325,6 @@ export default function OwnedObjectsPage() {
   };
 
   const openModal = async (obj: any) => {
-    console.log("Opening modal for object:", obj);
     setSelectedObject(obj);
     setModalVisible(true);
     // Fetch owned objects associated with this NFT when modal opens
