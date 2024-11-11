@@ -12,9 +12,11 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+
     "paths": {
       "#/*": ["./*"],
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@mysten/sui/client": ["./node_modules/@mysten/sui/client"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],

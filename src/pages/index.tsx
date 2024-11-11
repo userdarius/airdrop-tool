@@ -1,17 +1,13 @@
 /* eslint-disable react/react-in-jsx-scope */
-import { RootletsLogo } from "@/components/icons/rootlets-logo";
 import Link from "next/link";
 import Image from "next/image";
 import Head from "next/head";
 import { Button } from "@/components/ui/button";
-import { SuilendLogo } from "@/components/icons/suilend-logo";
+
 import { Telegram } from "@/components/icons/telegram";
 import { Twitter } from "@/components/icons/twitter";
-import SolendLogo from "#/public/home/who-are-we/solend.jpeg";
-import RootletsStoryImage from "#/public/home/hero/story.jpg";
-import RootletsUtilityImage from "#/public/home/hero/utility.png";
+
 import StayConnectedImage from "#/public/home/stay-connected/stay-connected.jpeg";
-import HonorariesSlider from "@/components/honoraries-slider";
 import config from "@/config";
 
 export default function Home() {
