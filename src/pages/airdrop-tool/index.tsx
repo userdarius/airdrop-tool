@@ -385,7 +385,7 @@ export default function OwnedObjectsPage() {
 
       {modalVisible && selectedObject && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="max-h-[80vh] w-1/2 overflow-y-auto rounded-lg bg-white p-6 shadow-lg">
+          <div className="max-h-[80vh] w-1/2 overflow-y-auto rounded-lg bg-gray-800 p-6 shadow-lg">
             <div className="mb-5 flex justify-center">
               <img
                 src={selectedObject.data.content.fields.image_url}
@@ -394,40 +394,42 @@ export default function OwnedObjectsPage() {
               />
             </div>
 
-            <h2 className="mb-4 text-xl font-bold text-black">NFT Details</h2>
+            <h2 className="mb-4 text-xl font-bold text-white">NFT Details</h2>
 
             <p>
-              <strong className="text-black">
+              <strong className="text-white">
                 This NFT owns the following:
               </strong>
-              <span className="block w-full truncate text-black">
-                {/*ownedObjects.length > 0
-                  ? ownedObjects.map((obj) => obj.data.type).join(", ")
-                  :*/ "Nothing found."}
+              <span className="block w-full truncate text-white">
+                {
+                  /*ownedObjects.length > 0
+            ? ownedObjects.map((obj) => obj.data.type).join(", ")
+            :*/ "Nothing found."
+                }
               </span>
             </p>
 
             <p>
-              <strong className="text-black">Object ID:</strong>
-              <span className="block w-full truncate text-black">
+              <strong className="text-white">Object ID:</strong>
+              <span className="block w-full truncate text-white">
                 {selectedObject.data.objectId}
               </span>
             </p>
             <p>
-              <strong className="text-black">Digest:</strong>
-              <span className="block w-full truncate text-black">
+              <strong className="text-white">Digest:</strong>
+              <span className="block w-full truncate text-white">
                 {selectedObject.data.digest}
               </span>
             </p>
 
-            <h3 className="mb-2 mt-4 text-lg font-semibold text-black">
+            <h3 className="mb-2 mt-4 text-lg font-semibold text-white">
               Metadata
             </h3>
-            <table className="w-full border-collapse border border-black text-left text-black">
+            <table className="w-full border-collapse border border-white text-left text-white">
               <thead>
                 <tr>
-                  <th className="border border-black p-2">Attribute</th>
-                  <th className="border border-black p-2">Value</th>
+                  <th className="border border-white p-2">Attribute</th>
+                  <th className="border border-white p-2">Value</th>
                 </tr>
               </thead>
               <tbody>
@@ -437,10 +439,10 @@ export default function OwnedObjectsPage() {
                     idx: number,
                   ) => (
                     <tr key={idx}>
-                      <td className="border border-black p-2">
+                      <td className="border border-white p-2">
                         {attribute.fields.key}
                       </td>
-                      <td className="border border-black p-2">
+                      <td className="border border-white p-2">
                         {attribute.fields.value}
                       </td>
                     </tr>
