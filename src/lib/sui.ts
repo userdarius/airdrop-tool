@@ -2,18 +2,18 @@
 /* eslint-disable no-else-return */
 /* eslint-disable prefer-template */
 import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
-import { KioskClient, KioskTransaction, Network } from "@mysten/kiosk";
+import { KioskClient } from "@mysten/kiosk";
 import { formatAddress as fa } from "@mysten/sui.js/utils";
 import { useWallet } from "@suiet/wallet-kit";
 import config from "@/config";
 
 export const suiClient = new SuiClient({
-  url: getFullnodeUrl(config.SUI_NETWORK),
+  url: getFullnodeUrl("mainnet"),
 });
 
 export const kioskClient = new KioskClient({
   client: suiClient,
-  network: config.SUI_NETWORK,
+  network: "mainnet",
 });
 
 export const formatAddress = (address: string) => fa(address);
