@@ -401,9 +401,9 @@ export default function OwnedObjectsPage() {
                 This NFT owns the following:
               </strong>
               <span className="block w-full truncate text-black">
-                {ownedObjects.length > 0
+                {/*ownedObjects.length > 0
                   ? ownedObjects.map((obj) => obj.data.type).join(", ")
-                  : "Nothing found."}
+                  :*/ "Nothing found."}
               </span>
             </p>
 
