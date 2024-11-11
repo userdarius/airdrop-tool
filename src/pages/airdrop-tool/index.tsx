@@ -59,7 +59,7 @@ export default function OwnedObjectsPage() {
    * @returns {Promise<string[]>} The owned Kiosk IDs.
    */
   const fetchKioskIds = async () => {
-    const address = "0x43af2f949516a90482cfab1a5b5bb94f53c87f5592a0df8ddeb651fdc393a974";
+    const address = walletKit.address;
     console.log("Fetching owned Kiosks for address:", address);
     try {
       const { kioskIds } = await kioskClient.getOwnedKiosks({
