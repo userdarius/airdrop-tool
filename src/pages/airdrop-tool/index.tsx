@@ -486,7 +486,7 @@ export default function OwnedObjectsPage() {
         <div className="mt-4">
           <h2 className="mb-2 text-xl font-semibold">Your Rootlets:</h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {rootletMetadata.map((obj, index) => (
+            {rootletMetadata.map((obj) => (
               <div
                 key={obj.data.objectId}
                 className="transform cursor-pointer rounded-lg border border-gray-600 bg-gray-800 p-4 shadow-lg transition duration-200 hover:scale-105"
@@ -498,10 +498,10 @@ export default function OwnedObjectsPage() {
                   className="mb-2 h-48 w-full rounded-lg object-cover"
                 />
                 <div className="truncate text-center">
-                  <strong>Object {index + 1}:</strong> {obj.data.objectId}
+                  <strong>Rootlet {obj.data.content.fields.number}</strong> 
                   <br />
                   <span className="truncate text-sm text-gray-400">
-                    Digest: {obj.data.digest}
+                    Object Id: {obj.data.objectId}
                   </span>
                 </div>
               </div>
