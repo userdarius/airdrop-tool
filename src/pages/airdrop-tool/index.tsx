@@ -19,6 +19,7 @@ export default function OwnedObjectsPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedObject, setSelectedObject] = useState<any>(null);
   const [ownedObjects, setOwnedObjects] = useState<any[]>([]);
+
   const [nftCount, setNftCount] = useState(0);
   const tx = new Transaction();
 
@@ -44,6 +45,7 @@ export default function OwnedObjectsPage() {
    */
   const fetchKioskOwnerCaps = async () => {
     const address = walletKit.address;
+    //const address = "0x43af2f949516a90482cfab1a5b5bb94f53c87f5592a0df8ddeb651fdc393a974";
     console.log("Fetching owned Kiosk Owner Caps for address:", address);
     try {
       const { kioskOwnerCaps } = await kioskClient.getOwnedKiosks({
@@ -65,6 +67,7 @@ export default function OwnedObjectsPage() {
    */
   const fetchKioskIds = async () => {
     const address = walletKit.address;
+    // const address = "0x43af2f949516a90482cfab1a5b5bb94f53c87f5592a0df8ddeb651fdc393a974";
     console.log("Fetching owned Kiosks for address:", address);
     try {
       const { kioskIds } = await kioskClient.getOwnedKiosks({
@@ -353,9 +356,9 @@ export default function OwnedObjectsPage() {
       setOwnedObjects(response.data);
       console.log("Owned objects:", response.data);
 
-      // Set an empty message if no objects are owned
+      // If no objects are owned, set an empty array
       if (response.data.length === 0) {
-        setOwnedObjects([{ objectId: "Nothing found." }]);
+        setOwnedObjects([]); // Set to an empty array instead of a placeholder
       }
     } catch (error) {
       console.error("Error fetching owned objects for NFT:", error);
@@ -534,8 +537,11 @@ export default function OwnedObjectsPage() {
                 {ownedObjects.length > 0
                   ? ownedObjects
                       .map((obj) => {
-                        const typeParts = obj.data.type.split("::");
-                        return typeParts[typeParts.length - 1].replace(">", ""); // Extracts the last part and removes the trailing ">"
+                        const typeParts = obj?.data?.type?.split("::") || [];
+                        return (
+                          typeParts[typeParts.length - 1]?.replace(">", "") ||
+                          ""
+                        );
                       })
                       .join(", ")
                   : "Nothing found."}
@@ -586,17 +592,23 @@ export default function OwnedObjectsPage() {
 
             <div className="mt-4 flex justify-center">
               <div className="mr-4 mt-4">
-                <Button
-                  onClick={() =>
-                    receiveTokens(
-                      selectedObject.data.objectId,
-                      ownedObjects,
-                      walletKit.account?.address || "",
-                    )
-                  }
-                >
-                  Claim airdrops
-                </Button>
+                {ownedObjects.length > 0 ? (
+                  <Button
+                    onClick={() =>
+                      receiveTokens(
+                        selectedObject.data.objectId,
+                        ownedObjects,
+                        walletKit.account?.address || "",
+                      )
+                    }
+                  >
+                    Claim airdrops
+                  </Button>
+                ) : (
+                  <Button disabled className="cursor-not-allowed opacity-50">
+                    Nothing to claim
+                  </Button>
+                )}
               </div>
               <div className="mt-4">
                 <Button onClick={closeModal}>Close</Button>
