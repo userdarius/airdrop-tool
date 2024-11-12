@@ -10,7 +10,6 @@ import {
   TransactionResult,
 } from "@mysten/sui/transactions";
 import { SuiObjectResponse } from "@mysten/sui/client";
-import { bcs } from "@mysten/sui/bcs";
 
 export default function OwnedObjectsPage() {
   const walletKit = useWalletKit();
@@ -20,7 +19,7 @@ export default function OwnedObjectsPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedObject, setSelectedObject] = useState<any>(null);
   const [ownedObjects, setOwnedObjects] = useState<any[]>([]);
-  const tx = new Transaction(); // construct transaction
+  const tx = new Transaction();
 
   type NFT = {
     id: string;
@@ -30,14 +29,14 @@ export default function OwnedObjectsPage() {
     };
   };
 
+  // Constant to be moved to configuration file
   const ROOTLET_TYPE =
     "0x8f74a7d632191e29956df3843404f22d27bd84d92cca1b1abde621d033098769::rootlet::Rootlet";
 
   const RECEIVE_ROOTLET_METHOD =
     "0xbe7741c72669f1552d0912a4bc5cdadb5856bcb970350613df9b4362e4855dc5::rootlet::receive_obj";
 
-  // Helper functions for fetching kiosk information
-
+  // Helper functions for fetching kiosk information to be moved to a separate file
   /**
    * Fetches the Kiosk Owner Caps owned by the current wallet address.
    * @returns {Promise<KioskOwnerCap[]>} The owned Kiosk Owner Caps.
@@ -149,6 +148,16 @@ export default function OwnedObjectsPage() {
     ];
   }
 
+  /**
+   * Return a Rootlet to a Kiosk.
+   * @param nft The NFT object to return.
+   * @param kioskOwnerCap The Kiosk Owner Cap object.
+   * @param returnKioskOwnerCapPromise The promise to return the Kiosk Owner Cap.
+   * @param borrowedNft The borrowed NFT object.
+   * @param returnNftPromise The promise to return the NFT.
+   * @param tx The transaction object.
+   * @returns {void}
+   */
   function returnRootletToKiosk(
     nft: NFT,
     kioskOwnerCap: TransactionObjectArgument,
@@ -206,7 +215,7 @@ export default function OwnedObjectsPage() {
             personal_kiosk_cap_id: kioskcapid,
           },
         };
-        console.log("NFT:", nft);
+
         const [
           kioskOwnerCap,
           returnKioskOwnerCapPromise,
@@ -238,7 +247,6 @@ export default function OwnedObjectsPage() {
       }
       try {
         console.log("Final transaction data:", tx.getData());
-        tx.setGasBudget(100000000);
         await walletKit.signAndExecuteTransaction({ transaction: tx });
       } catch (error) {
         console.error("Error receiving object:", error);
@@ -246,6 +254,10 @@ export default function OwnedObjectsPage() {
     }
   };
 
+  /**
+   * Fetches the owned objects associated with an NFT.
+   * @param obj The NFT object.
+   */
   const getOwnedObjectsFromNFT = async (obj: any) => {
     try {
       const response = await suiClient.getOwnedObjects({
@@ -270,6 +282,11 @@ export default function OwnedObjectsPage() {
 
   // const receiveAll = async () => {};
 
+  /**
+   * Fetches the metadata for the Rootlets to display in the UI.
+   * @param nfts The Rootlets to fetch metadata for.
+   * @returns {Promise<void>}
+   */
   const getMetadata = async (nfts: KioskItem[]) => {
     const metadataList: SuiObjectResponse[] = [];
 
@@ -285,7 +302,6 @@ export default function OwnedObjectsPage() {
 
       metadataList.push(metadata);
     }
-
     setRootletMetadata((prev) => [...prev, ...metadataList]);
   };
 
