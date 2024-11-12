@@ -19,6 +19,7 @@ export default function OwnedObjectsPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedObject, setSelectedObject] = useState<any>(null);
   const [ownedObjects, setOwnedObjects] = useState<any[]>([]);
+  const [nftCount, setNftCount] = useState(0);
   const tx = new Transaction();
 
   type NFT = {
@@ -124,7 +125,7 @@ export default function OwnedObjectsPage() {
     const personal_kiosk_package_id = kioskClient.getRulePackageId(
       "personalKioskRulePackageId",
     );
-
+    console.log("NFT TO BE BORROWED: ", nft);
     const [kioskOwnerCap, returnKioskOwnerCapPromise] = tx.moveCall({
       target: `${personal_kiosk_package_id}::personal_kiosk::borrow_val`,
       arguments: [tx.object(nft.owner.personal_kiosk_cap_id)],
@@ -197,7 +198,7 @@ export default function OwnedObjectsPage() {
 
   const receiveTokens = async (
     rootletId: string,
-    items: any[],
+    items: TransactionObjectArgument[],
     recipient: string,
   ) => {
     // create NFT object and borrow from kiosk
@@ -255,11 +256,91 @@ export default function OwnedObjectsPage() {
   };
 
   /**
+   * Deprecated, requires multiple signatures, use claimAllObjectsInSingleTransaction instead
+   */
+  const claimAllOwnedObjects = async () => {
+    const recipient = walletKit.address || "";
+    for (const rootlet of ownedRootlets) {
+      const items = rootletMetadata.map((obj) => tx.object(obj.data.objectId));
+      await receiveTokens(rootlet.data.objectId, items, recipient);
+    }
+  };
+
+  const claimAllObjectsInSingleTransaction = async () => {
+    const recipient = walletKit.account?.address || "";
+    const tx = new Transaction();
+
+    try {
+      for (const rootlet of ownedRootlets) {
+        const kioskcapids = await fetchKioskOwnerCapObjectIdsWithRootlets();
+
+        for (const kioskcapid of kioskcapids) {
+          const nft: NFT = {
+            id: rootlet.data.objectId,
+            owner: {
+              kiosk_id: rootlet.kioskId,
+              personal_kiosk_cap_id: kioskcapid,
+            },
+          };
+
+          // Borrow the rootlet
+          const [
+            kioskOwnerCap,
+            returnKioskOwnerCapPromise,
+            borrowedNft,
+            returnNftPromise,
+          ] = borrowRootletFromKiosk(nft, tx);
+
+          const received_items = [];
+          for (const obj of rootletMetadata) {
+            const item = obj.data.objectId;
+
+            // Claim the object in one transaction
+            const received_item = tx.moveCall({
+              target: RECEIVE_ROOTLET_METHOD,
+              arguments: [tx.object(rootlet.data.objectId), tx.object(item)],
+            });
+
+            received_items.push(received_item);
+          }
+
+          // Transfer all items to the recipient in one go
+          tx.transferObjects(received_items, tx.pure.address(recipient));
+
+          // Return the rootlet to the kiosk
+          returnRootletToKiosk(
+            nft,
+            kioskOwnerCap,
+            returnKioskOwnerCapPromise,
+            borrowedNft,
+            returnNftPromise,
+            tx,
+          );
+        }
+      }
+
+      // Execute the single transaction
+      console.log("Final batched transaction data:", tx.getData());
+      await walletKit.signAndExecuteTransaction({ transaction: tx });
+      console.log("All objects claimed in a single transaction.");
+    } catch (error) {
+      console.error(
+        "Error claiming all objects in a single transaction:",
+        error,
+      );
+    }
+  };
+
+  /**
    * Fetches the owned objects associated with an NFT.
    * @param obj The NFT object.
    */
-  const getOwnedObjectsFromNFT = async (obj: any) => {
+  const getOwnedObjectsFromNFT = async (obj: SuiObjectResponse) => {
     try {
+      if (!obj.data) {
+        throw new Error("Object data is null or undefined");
+      }
+
       const response = await suiClient.getOwnedObjects({
         owner: obj.data.objectId,
         options: {
@@ -311,6 +392,12 @@ export default function OwnedObjectsPage() {
     }
   }, [rootletMetadata]);
 
+  useEffect(() => {
+    if (rootletMetadata.length > 0) {
+      setNftCount(rootletMetadata.length);
+    }
+  }, [rootletMetadata]);
+
   /**
    * Fetches the Rootlets owned by the current wallet address and updates the state with the new Rootlets.
    * @returns {Promise<void>}
@@ -350,7 +437,7 @@ export default function OwnedObjectsPage() {
     }
   };
 
-  const openModal = async (obj: any) => {
+  const openModal = async (obj: SuiObjectResponse) => {
     setSelectedObject(obj);
     setModalVisible(true);
     // Fetch owned objects associated with this NFT when modal opens
@@ -386,6 +473,11 @@ export default function OwnedObjectsPage() {
         {rootletMetadata.length > 0 && (
           <Button onClick={fetchOwnedRootlets} disabled={isLoading}>
             {isLoading ? "Loading..." : "Refresh"}
+          </Button>
+        )}
+        {nftCount > 1 && (
+          <Button onClick={claimAllObjectsInSingleTransaction}>
+            Claim All
           </Button>
         )}
       </div>
