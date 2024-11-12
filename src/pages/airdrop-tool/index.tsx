@@ -258,6 +258,7 @@ export default function OwnedObjectsPage() {
   /**
    * Deprecated, requires multiple signatures, use claimAllObjectsInSingleTransaction instead
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const claimAllOwnedObjects = async () => {
     const recipient = walletKit.address || "";
     for (const rootlet of ownedRootlets) {
@@ -498,7 +499,7 @@ export default function OwnedObjectsPage() {
                   className="mb-2 h-48 w-full rounded-lg object-cover"
                 />
                 <div className="truncate text-center">
-                  <strong>Rootlet {obj.data.content.fields.number}</strong> 
+                  <strong>Rootlet {obj.data.content.fields.number}</strong>
                   <br />
                   <span className="truncate text-sm text-gray-400">
                     Object Id: {obj.data.objectId}
@@ -530,11 +531,14 @@ export default function OwnedObjectsPage() {
                 This NFT owns the following:
               </strong>
               <span className="block w-full truncate text-white">
-                {
-                  /*ownedObjects.length > 0
-            ? ownedObjects.map((obj) => obj.data.type).join(", ")
-            :*/ "Nothing found."
-                }
+                {ownedObjects.length > 0
+                  ? ownedObjects
+                      .map((obj) => {
+                        const typeParts = obj.data.type.split("::");
+                        return typeParts[typeParts.length - 1].replace(">", ""); // Extracts the last part and removes the trailing ">"
+                      })
+                      .join(", ")
+                  : "Nothing found."}
               </span>
             </p>
 
