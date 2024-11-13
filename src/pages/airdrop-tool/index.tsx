@@ -19,6 +19,8 @@ export default function OwnedObjectsPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedObject, setSelectedObject] = useState<any>(null);
   const [ownedObjects, setOwnedObjects] = useState<any[]>([]);
+  const [ownedKioskCaps, setOwnedKioskCaps] = useState<any[]>([]);
+  const [ownedKioskIds, setOwnedKioskIds] = useState<any[]>([]);
 
   const [nftCount, setNftCount] = useState(0);
   const tx = new Transaction();
@@ -128,7 +130,7 @@ export default function OwnedObjectsPage() {
     const personal_kiosk_package_id = kioskClient.getRulePackageId(
       "personalKioskRulePackageId",
     );
-    console.log("NFT TO BE BORROWED: ", nft);
+
     const [kioskOwnerCap, returnKioskOwnerCapPromise] = tx.moveCall({
       target: `${personal_kiosk_package_id}::personal_kiosk::borrow_val`,
       arguments: [tx.object(nft.owner.personal_kiosk_cap_id)],
@@ -139,7 +141,7 @@ export default function OwnedObjectsPage() {
       arguments: [
         tx.object(nft.owner.kiosk_id),
         kioskOwnerCap,
-        tx.pure.address(nft.id),
+        tx.pure.id(nft.id),
       ],
       typeArguments: [ROOTLET_TYPE],
     });
@@ -181,7 +183,7 @@ export default function OwnedObjectsPage() {
 
     if (nft.owner.personal_kiosk_cap_id) {
       tx.moveCall({
-        target: `${personal_kiosk_package_id}::personal_kiosk::borrow_val`,
+        target: `${personal_kiosk_package_id}::personal_kiosk::return_val`,
         arguments: [
           tx.object(nft.owner.personal_kiosk_cap_id as string),
           kioskOwnerCap,
@@ -204,58 +206,221 @@ export default function OwnedObjectsPage() {
     items: TransactionObjectArgument[],
     recipient: string,
   ) => {
-    // create NFT object and borrow from kiosk
-    for (const rootlet of ownedRootlets) {
-      if (rootlet.data.objectId !== rootletId) {
-        continue;
-      }
-      const kioskcapids = await fetchKioskOwnerCapObjectIdsWithRootlets();
+    // Get all owned kiosks
+    const address = walletKit.address;
+    try {
+      const { kioskOwnerCaps, kioskIds } = await kioskClient.getOwnedKiosks({
+        address: address || "",
+        pagination: {
+          limit: 50,
+        },
+      });
+      setOwnedKioskCaps(kioskOwnerCaps);
+      setOwnedKioskIds(kioskIds);
+      console.log("Owned Kiosk Owner Caps:", ownedKioskCaps);
+      console.log("Owned Kiosk IDs:", ownedKioskIds);
 
-      for (const kioskcapid of kioskcapids) {
-        const nft: NFT = {
-          id: rootletId,
-          owner: {
-            kiosk_id: rootlet.kioskId,
-            personal_kiosk_cap_id: kioskcapid,
+      // keep only personal kiosks
+      const personalKiosks = kioskOwnerCaps.filter(
+        (kioskOwnerCap) => kioskOwnerCap.isPersonal === true,
+      );
+      console.log("Personal Kiosks:", personalKiosks);
+
+      // get all items in the kiosks per cap
+      const kioskItems = [];
+      for (const kioskOwnerCap of personalKiosks) {
+        const kiosk = await kioskClient.getKiosk({
+          id: kioskOwnerCap.kioskId.toString(),
+          options: {
+            withObjects: true,
           },
-        };
+        });
+        kioskItems.push(kiosk.items);
+      }
+      console.log("Kiosk Items:", kioskItems);
 
-        const [
-          kioskOwnerCap,
-          returnKioskOwnerCapPromise,
-          borrowedNft,
-          returnNftPromise,
-        ] = borrowRootletFromKiosk(nft, tx);
-
-        const received_items: TransactionResult[] = [];
-
-        for (const item of items) {
-          const received_item = tx.moveCall({
-            target: RECEIVE_ROOTLET_METHOD,
-            arguments: [tx.object(rootletId), tx.object(item)],
-          });
-
-          received_items.push(received_item);
+      // if it's a rootlet add cap id and kiosk id
+      const nfts = [];
+      for (const item of kioskItems) {
+        for (const obj of item) {
+          if (obj.type === ROOTLET_TYPE) {
+            const nft: NFT = {
+              id: obj.objectId,
+              owner: {
+                kiosk_id: obj.kioskId,
+                personal_kiosk_cap_id: personalKiosks[0].objectId,
+              },
+            };
+            nfts.push(nft);
+          }
         }
+      }
+      console.log("NFT number 0:", nfts[0]);
 
-        tx.transferObjects(received_items, tx.pure.address(recipient));
+      const personal_kiosk_package_id = kioskClient.getRulePackageId(
+        "personalKioskRulePackageId",
+      );
 
-        returnRootletToKiosk(
-          nft,
+      const COINS = await suiClient.getOwnedObjects({
+        owner: nfts[0].id,
+        options: {
+          showContent: true,
+          showType: true,
+        },
+      });
+
+      console.log("Objects owned by NFT:", COINS);
+
+      const [kioskOwnerCap, perosnalBorrow] = tx.moveCall({
+        target: `${personal_kiosk_package_id}::personal_kiosk::borrow_val`,
+        arguments: [tx.object(nfts[0].owner.personal_kiosk_cap_id)],
+      });
+
+
+      const [nft, nftBorrow] = tx.moveCall({
+        target: `0x2::kiosk::borrow_val`,
+        arguments: [
+          tx.object(nfts[0].owner.kiosk_id),
           kioskOwnerCap,
-          returnKioskOwnerCapPromise,
-          borrowedNft,
-          returnNftPromise,
-          tx,
-        );
-      }
-      try {
-        console.log("Final transaction data:", tx.getData());
-        await walletKit.signAndExecuteTransaction({ transaction: tx });
-      } catch (error) {
-        console.error("Error receiving object:", error);
-      }
+          tx.pure.id(nfts[0].id),
+        ],
+        typeArguments: [ROOTLET_TYPE],
+      });
+
+      const coin = tx.moveCall({
+        target: RECEIVE_ROOTLET_METHOD,
+        arguments: [
+          nft,
+          tx.object(
+            "0xb5a00a06950a05b5cdbb85b8b449eae74762f4914b102f12b89fc28468f4aae1", // this changes everytime
+          ),
+        ],
+        typeArguments: [
+          "0x2::coin::Coin<0x57e93d9e28ce2303dc7838bb00b7f3f012a1856b3738e5a3ee252de265ff5ff6::turbo::TURBO>",
+        ],
+      });
+
+      tx.transferObjects([coin], tx.pure.address(walletKit.address as string));
+
+      tx.moveCall({
+        target: `0x2::kiosk::return_val`,
+        arguments: [tx.object(nfts[0].owner.kiosk_id), nft, nftBorrow],
+        typeArguments: [ROOTLET_TYPE],
+      });
+
+      tx.moveCall({
+        target: `${personal_kiosk_package_id}::personal_kiosk::return_val`,
+        arguments: [
+          tx.object(nfts[0].owner.personal_kiosk_cap_id),
+          kioskOwnerCap,
+          perosnalBorrow,
+        ],
+      });
+
+      // const res = await suiClient.devInspectTransactionBlock({
+      //   transactionBlock: tx as,
+      //   sender:
+      //     '0xc1899f1b4d0cdf101524def0b4835ebacec9f4416ee4b571a218da2bc22510c9',
+      // });
+
+      // const [
+      //   kioskOwnerCap,
+      //   returnKioskOwnerCapPromise,
+      //   borrowedNft,
+      //   returnNftPromise,
+      // ] = borrowRootletFromKiosk(nfts[0], tx);
+
+      // console.log("Owned objects:", ownedObjects[0].data.objectId);
+      // // const received_items = [];
+
+      // // for (const item of items) {
+      // //   const received_item = tx.moveCall({
+      // //     target: RECEIVE_ROOTLET_METHOD,
+      // //     arguments: [tx.object(nfts[0].id), tx.object(item)],
+      // //   });
+
+      // //   received_items.push(received_item);
+      // // }
+      // const coin = tx.moveCall({
+      //   target: RECEIVE_ROOTLET_METHOD,
+      //   arguments: [
+      //     borrowedNft,
+      //     tx.object(
+      //       "0x22ad9cc03a72a850266e8510c13f6fced4fd6ab9227897e5b8257866c17a7b73",
+      //     ),
+      //   ],
+      // });
+
+      // tx.transferObjects([coin], tx.pure.address("0x0"));
+
+      // returnRootletToKiosk(
+      //   nfts[0],
+      //   kioskOwnerCap,
+      //   returnKioskOwnerCapPromise,
+      //   borrowedNft,
+      //   returnNftPromise,
+      //   tx,
+      // );
+
+      // console.log("Final transaction data:", tx.getData());
+      tx.setGasBudget(10000000);
+      await walletKit.signAndExecuteTransaction({ transaction: tx });
+    } catch (error) {
+      console.error("Error fetching owned Kiosks:", error);
     }
+
+    // create NFT object and borrow from kiosk
+    // for (const rootlet of ownedRootlets) {
+    //   if (rootlet.data.objectId !== rootletId) {
+    //     continue;
+    //   }
+    //   const kioskcapids = await fetchKioskOwnerCapObjectIdsWithRootlets();
+
+    //   for (const kioskcapid of kioskcapids) {
+    //     const nft: NFT = {
+    //       id: rootletId,
+    //       owner: {
+    //         kiosk_id: rootlet.kioskId,
+    //         personal_kiosk_cap_id: kioskcapid,
+    //       },
+    //     };
+
+    //     const [
+    //       kioskOwnerCap,
+    //       returnKioskOwnerCapPromise,
+    //       borrowedNft,
+    //       returnNftPromise,
+    //     ] = borrowRootletFromKiosk(nft, tx);
+
+    //     const received_items: TransactionResult[] = [];
+
+    //     for (const item of items) {
+    //       const received_item = tx.moveCall({
+    //         target: RECEIVE_ROOTLET_METHOD,
+    //         arguments: [tx.object(rootletId), tx.object(item)],
+    //       });
+
+    //       received_items.push(received_item);
+    //     }
+
+    //     tx.transferObjects(received_items, tx.pure.address(recipient));
+
+    //     returnRootletToKiosk(
+    //       nft,
+    //       kioskOwnerCap,
+    //       returnKioskOwnerCapPromise,
+    //       borrowedNft,
+    //       returnNftPromise,
+    //       tx,
+    //     );
+    //   }
+    //   try {
+    //     console.log("Final transaction data:", tx.getData());
+    //     await walletKit.signAndExecuteTransaction({ transaction: tx });
+    //   } catch (error) {
+    //     console.error("Error receiving object:", error);
+    //   }
+    // }
   };
 
   /**
