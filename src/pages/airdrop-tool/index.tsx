@@ -15,7 +15,6 @@ export default function OwnedObjectsPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedObject, setSelectedObject] = useState<any>(null);
   const [ownedObjects, setOwnedObjects] = useState<any[]>([]);
-
   const [nftCount, setNftCount] = useState(0);
   const tx = new Transaction();
 
@@ -27,7 +26,7 @@ export default function OwnedObjectsPage() {
     };
   };
 
-  // Constant to be moved to configuration file
+  // Constants to be moved to configuration file
   const ROOTLET_TYPE =
     "0x8f74a7d632191e29956df3843404f22d27bd84d92cca1b1abde621d033098769::rootlet::Rootlet";
 
@@ -54,14 +53,12 @@ export default function OwnedObjectsPage() {
     }
   };
 
-  // Move function to call
-  /*public fun receive_obj<T: key + store>(
-      rootlet: &mut Rootlet,
-      obj_to_receive: Receiving<T>,
-  ): T {
-      transfer::public_receive(rootlet.uid_mut(), obj_to_receive)
-  }*/
 
+  /**
+   * Claim tokens airdropped to one rootlet in particular
+   * @param rootletId the object id of the rootlet
+   * @param recipient the address receiving the tokens  
+   */
   const receiveTokens = async (rootletId: string, recipient: string) => {
     // Get all kiosks
     const address = walletKit.address;
@@ -175,6 +172,9 @@ export default function OwnedObjectsPage() {
     }
   };
 
+  /**
+   * Claim all tokens airdropped to your rootlets in one trx
+   */
   const claimAllObjectsInSingleTransaction = async () => {
     // Get all kiosks
     const recipient = walletKit.address;
