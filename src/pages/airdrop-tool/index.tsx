@@ -6,6 +6,7 @@ import Head from "next/head";
 import { KioskItem } from "@mysten/kiosk";
 import { Transaction } from "@mysten/sui/transactions";
 import { SuiObjectResponse } from "@mysten/sui/client";
+import { Progress } from "@/components/ui/progress";
 
 export default function OwnedObjectsPage() {
   const walletKit = useWalletKit();
@@ -16,6 +17,10 @@ export default function OwnedObjectsPage() {
   const [selectedObject, setSelectedObject] = useState<any>(null);
   const [ownedObjects, setOwnedObjects] = useState<any[]>([]);
   const [nftCount, setNftCount] = useState(0);
+  const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [totalNFTs, setTotalNFTs] = useState(0);
+  const [totalAirdrops, setTotalAirdrops] = useState(0);
   const tx = new Transaction();
 
   type NFT = {
@@ -34,41 +39,126 @@ export default function OwnedObjectsPage() {
     "0xbe7741c72669f1552d0912a4bc5cdadb5856bcb970350613df9b4362e4855dc5::rootlet::receive_obj";
 
   /**
+   * Processes an array of items in batches with rate limiting
+   * @param items Items to process
+   * @param batchSize Number of items to process in each batch
+   * @param delayMs Delay between batches in milliseconds
+   * @param processFn Function to process each item
+   * @param onProgress Optional callback for progress updates
+   */
+  async function processInBatches<T, R>(
+    items: T[],
+    batchSize: number,
+    delayMs: number,
+    processFn: (item: T) => Promise<R>,
+    onProgress?: (progress: number) => void,
+  ): Promise<R[]> {
+    const results: R[] = [];
+    const batches = Math.ceil(items.length / batchSize);
+
+    for (let i = 0; i < batches; i++) {
+      const start = i * batchSize;
+      const end = Math.min(start + batchSize, items.length);
+      const batch = items.slice(start, end);
+
+      // Process items in current batch concurrently
+      const batchResults = await Promise.all(
+        batch.map(async (item) => {
+          try {
+            return await processFn(item);
+          } catch (error) {
+            console.error(`Error processing item:`, error);
+            throw error;
+          }
+        }),
+      );
+
+      results.push(...batchResults);
+
+      // Update progress
+      const progress = (((i + 1) * batchSize) / items.length) * 100;
+      onProgress?.(Math.min(progress, 100));
+
+      // Add delay between batches, except for the last batch
+      if (i < batches - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+
+    return results;
+  }
+
+  /**
    * Fetches the Kiosk IDs owned by the current wallet address.
    * @returns {Promise<string[]>} The owned Kiosk IDs.
    */
   const fetchKioskIds = async () => {
     const address = walletKit.address;
+    // const address =
+    //   "0x3d8d36f1207c5cccfd9e3b25fa830231da282a03b2874b3737096833aa72edd2";
     try {
-      const { kioskIds } = await kioskClient.getOwnedKiosks({
-        address: address || "",
-        pagination: {
-          limit: 50,
-        },
-      });
+      let allKioskIds: string[] = [];
+      let hasNextPage = true;
+      let cursor: string | null = null;
 
-      return kioskIds;
+      while (hasNextPage) {
+        const response = await kioskClient.getOwnedKiosks({
+          address: address || "",
+          pagination: {
+            limit: 50,
+            cursor: cursor ?? undefined,
+          },
+        });
+
+        allKioskIds = [...allKioskIds, ...response.kioskIds];
+
+        if (response.hasNextPage && response.nextCursor) {
+          cursor = response.nextCursor;
+        } else {
+          hasNextPage = false;
+        }
+      }
+
+      return allKioskIds;
     } catch (error) {
       console.error("Error fetching owned Kiosks:", error);
     }
   };
 
-
   /**
    * Claim tokens airdropped to one rootlet in particular
    * @param rootletId the object id of the rootlet
-   * @param recipient the address receiving the tokens  
+   * @param recipient the address receiving the tokens
    */
   const receiveTokens = async (rootletId: string, recipient: string) => {
     // Get all kiosks
     const address = walletKit.address;
+    // const address =
+    //   "0x3d8d36f1207c5cccfd9e3b25fa830231da282a03b2874b3737096833aa72edd2";
     try {
-      const { kioskOwnerCaps } = await kioskClient.getOwnedKiosks({
-        address: address || "",
-        pagination: {
-          limit: 50,
-        },
-      });
+      let allKioskOwnerCaps = [];
+      let hasNextPage = true;
+      let cursor: string | null = null;
+
+      while (hasNextPage) {
+        const response = await kioskClient.getOwnedKiosks({
+          address: address || "",
+          pagination: {
+            limit: 50,
+            cursor: cursor ?? undefined,
+          },
+        });
+
+        allKioskOwnerCaps = [...allKioskOwnerCaps, ...response.kioskOwnerCaps];
+
+        if (response.hasNextPage && response.nextCursor) {
+          cursor = response.nextCursor;
+        } else {
+          hasNextPage = false;
+        }
+      }
+
+      const { kioskOwnerCaps } = { kioskOwnerCaps: allKioskOwnerCaps };
 
       // keep only personal kiosks
       const personalKiosks = kioskOwnerCaps.filter(
@@ -179,12 +269,29 @@ export default function OwnedObjectsPage() {
     // Get all kiosks
     const recipient = walletKit.address;
     try {
-      const { kioskOwnerCaps } = await kioskClient.getOwnedKiosks({
-        address: recipient || "",
-        pagination: {
-          limit: 50,
-        },
-      });
+      let allKioskOwnerCaps = [];
+      let hasNextPage = true;
+      let cursor: string | null = null;
+
+      while (hasNextPage) {
+        const response = await kioskClient.getOwnedKiosks({
+          address: recipient || "",
+          pagination: {
+            limit: 50,
+            cursor: cursor ?? undefined,
+          },
+        });
+
+        allKioskOwnerCaps = [...allKioskOwnerCaps, ...response.kioskOwnerCaps];
+
+        if (response.hasNextPage && response.nextCursor) {
+          cursor = response.nextCursor;
+        } else {
+          hasNextPage = false;
+        }
+      }
+
+      const { kioskOwnerCaps } = { kioskOwnerCaps: allKioskOwnerCaps };
 
       // keep only personal kiosks
       const personalKiosks = kioskOwnerCaps.filter(
@@ -312,10 +419,13 @@ export default function OwnedObjectsPage() {
 
       // If no objects are owned, set an empty array
       if (response.data.length === 0) {
-        setOwnedObjects([]); // Set to an empty array instead of a placeholder
+        setOwnedObjects([]);
       }
+
+      return response.data.length; // Return the number of airdrops for this NFT
     } catch (error) {
       console.error("Error fetching owned objects for NFT:", error);
+      return 0;
     }
   };
 
@@ -325,21 +435,43 @@ export default function OwnedObjectsPage() {
    * @returns {Promise<void>}
    */
   const getMetadata = async (nfts: KioskItem[]) => {
-    const metadataList: SuiObjectResponse[] = [];
+    setLoadingMetadata(true);
+    setTotalNFTs(nfts.length);
+    setProgress(0);
+    let totalDrops = 0;
 
-    for (const nft of nfts) {
-      const metadata = await suiClient.getObject({
-        id: nft.objectId,
-        options: {
-          showContent: true,
-          showType: true,
-          showBcs: true,
+    try {
+      const metadataList = await processInBatches(
+        nfts,
+        5, // Process 5 NFTs at a time
+        500, // Wait 1 second between batches
+        async (nft) => {
+          const metadata = await suiClient.getObject({
+            id: nft.objectId,
+            options: {
+              showContent: true,
+              showType: true,
+              showBcs: true,
+            },
+          });
+
+          // Count airdrops for this NFT
+          const airdropCount = await getOwnedObjectsFromNFT(metadata);
+          totalDrops += airdropCount;
+
+          return metadata;
         },
-      });
+        (progress) => setProgress(progress),
+      );
 
-      metadataList.push(metadata);
+      setTotalAirdrops(totalDrops);
+      setRootletMetadata((prev) => [...prev, ...metadataList]);
+    } catch (error) {
+      console.error("Error fetching metadata:", error);
+      // Handle error appropriately
+    } finally {
+      setLoadingMetadata(false);
     }
-    setRootletMetadata((prev) => [...prev, ...metadataList]);
   };
 
   useEffect(() => {
@@ -432,11 +564,28 @@ export default function OwnedObjectsPage() {
           </Button>
         )}
         {nftCount > 1 && (
-          <Button onClick={claimAllObjectsInSingleTransaction}>
-            Claim All
+          <Button
+            onClick={claimAllObjectsInSingleTransaction}
+            disabled={totalAirdrops === 0}
+            className={
+              totalAirdrops === 0 ? "cursor-not-allowed opacity-50" : ""
+            }
+          >
+            {totalAirdrops === 0 ? "Nothing to claim" : "Claim All"}
           </Button>
         )}
       </div>
+
+      {/* Loading Progress Bar */}
+      {loadingMetadata && (
+        <div className="mb-6">
+          <div className="mb-2 flex justify-between text-sm">
+            <span>Loading NFT metadata and images...</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <Progress value={progress} className="h-2 w-full" />
+        </div>
+      )}
 
       {rootletMetadata.length > 0 ? (
         <div className="mt-4">
@@ -465,7 +614,9 @@ export default function OwnedObjectsPage() {
           </div>
         </div>
       ) : (
-        <div className="mt-4 text-center text-gray-400">No rootlets found.</div>
+        <div className="mt-4 text-center text-gray-400">
+          {loadingMetadata ? "Loading your Rootlets..." : "No rootlets found."}
+        </div>
       )}
 
       {modalVisible && selectedObject && (
