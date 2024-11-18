@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useWalletKit, kioskClient, suiClient } from "@/lib/sui";
 import { Button } from "@/components/ui/button";
 import Head from "next/head";
-import { KioskItem } from "@mysten/kiosk";
+import { KioskItem, KioskOwnerCap } from "@mysten/kiosk";
 import { Transaction } from "@mysten/sui/transactions";
 import { SuiObjectResponse } from "@mysten/sui/client";
 import { Progress } from "@/components/ui/progress";
@@ -136,7 +136,7 @@ export default function OwnedObjectsPage() {
     // const address =
     //   "0x3d8d36f1207c5cccfd9e3b25fa830231da282a03b2874b3737096833aa72edd2";
     try {
-      let allKioskOwnerCaps = [];
+      let allKioskOwnerCaps: KioskOwnerCap[] = [];
       let hasNextPage = true;
       let cursor: string | null = null;
 
@@ -269,7 +269,7 @@ export default function OwnedObjectsPage() {
     // Get all kiosks
     const recipient = walletKit.address;
     try {
-      let allKioskOwnerCaps = [];
+      let allKioskOwnerCaps: KioskOwnerCap[] = [];
       let hasNextPage = true;
       let cursor: string | null = null;
 
