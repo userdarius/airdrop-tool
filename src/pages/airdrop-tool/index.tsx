@@ -21,6 +21,11 @@ export default function OwnedObjectsPage() {
   const [progress, setProgress] = useState(0);
   const [totalNFTs, setTotalNFTs] = useState(0);
   const [totalAirdrops, setTotalAirdrops] = useState(0);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const loadingMessages = [
+    "Loading your Rootlets...",
+    "Wow you have a lot of NFTs! Give us a sec to fetch them all.",
+  ];
   const tx = new Transaction();
 
   type NFT = {
@@ -544,6 +549,26 @@ export default function OwnedObjectsPage() {
     }
   }, [ownedRootlets]);
 
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (loadingMetadata) {
+      // Wait 5 seconds before starting the message alternation
+      timeout = setTimeout(() => {
+        const interval = setInterval(() => {
+          setLoadingMessageIndex(
+            (prevIndex) => (prevIndex + 1) % loadingMessages.length,
+          );
+        }, 5000);
+
+        // Cleanup interval when loading finishes
+        return () => clearInterval(interval);
+      }, 5000);
+    }
+
+    // Cleanup timeout if loading stops before 5 seconds
+    return () => clearTimeout(timeout);
+  }, [loadingMetadata]);
+
   return (
     <div className="container mx-auto p-4">
       <Head>
@@ -615,7 +640,9 @@ export default function OwnedObjectsPage() {
         </div>
       ) : (
         <div className="mt-4 text-center text-gray-400">
-          {loadingMetadata ? "Loading your Rootlets..." : "No rootlets found."}
+          {loadingMetadata
+            ? loadingMessages[loadingMessageIndex]
+            : "No rootlets found."}
         </div>
       )}
 
