@@ -11,7 +11,6 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 
-
 export default function OwnedObjectsPage() {
   const walletKit = useWalletKit();
   const [ownedRootlets, setOwnedRootlets] = useState<any[]>([]);
@@ -680,7 +679,14 @@ export default function OwnedObjectsPage() {
 
             <p>
               <strong className="text-white">Digest:</strong>
-              <span className="block w-full truncate text-white">
+              <span
+                className="block w-full cursor-pointer truncate text-white"
+                onClick={() => {
+                  navigator.clipboard.writeText(selectedObject.data.digest);
+                  toast.success("Digest copied to clipboard!");
+                }}
+                title="Click to copy"
+              >
                 {selectedObject.data.digest}
               </span>
             </p>
