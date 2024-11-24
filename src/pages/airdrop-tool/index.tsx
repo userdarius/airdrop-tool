@@ -661,6 +661,54 @@ export default function OwnedObjectsPage() {
               />
             </div>
 
+            <div className="mb-4 text-center">
+              <Button
+                onClick={() => {
+                  let imageUrl = selectedObject.data.content.fields.image_url;
+
+                  // Remove double quotes if present
+                  if (imageUrl.startsWith('"') && imageUrl.endsWith('"')) {
+                    imageUrl = imageUrl.slice(1, -1); // Remove surrounding quotes
+                  }
+
+                  if (imageUrl.startsWith("data:")) {
+                    // Convert data URI to Blob
+                    const byteString = atob(imageUrl.split(",")[1]);
+                    const mimeString = imageUrl
+                      .split(",")[0]
+                      .split(":")[1]
+                      .split(";")[0];
+
+                    const ab = new ArrayBuffer(byteString.length);
+                    const ia = new Uint8Array(ab);
+                    for (let i = 0; i < byteString.length; i++) {
+                      ia[i] = byteString.charCodeAt(i);
+                    }
+
+                    const blob = new Blob([ab], { type: mimeString });
+                    const blobUrl = URL.createObjectURL(blob);
+
+                    // Open the Blob in a new tab
+                    window.open(blobUrl, "_blank");
+                  } else {
+                    // If it's not a data URI, open directly
+                    window.open(imageUrl, "_blank");
+                  }
+                }}
+                className="mt-2"
+              >
+                View Full Image
+              </Button>
+
+              <a
+                href={selectedObject.data.content.fields.image_url}
+                download={`Rootlet-${selectedObject.data.content.fields.number || "image"}.png`}
+                className="ml-4 mt-2 inline-block"
+              >
+                <Button>Download Image</Button>
+              </a>
+            </div>
+
             <h2 className="mb-4 text-xl font-bold text-white">NFT Details</h2>
 
             <p>
