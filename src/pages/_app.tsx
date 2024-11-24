@@ -1,3 +1,4 @@
+/* eslint-disable react/react-in-jsx-scope */
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import { editundo, jetbrains } from "@/styles/fonts";

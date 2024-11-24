@@ -46,6 +46,10 @@ export const NAVS = [
     title: "Airdrop Tool",
     href: "/airdrop-tool",
   },
+  {
+    title: "Airdrop to Rootlets",
+    href: "/airdrop-csv",
+  },
 ];
 
 export const Wallets = [Wallet1, Wallet2, Wallet3, Wallet4];
