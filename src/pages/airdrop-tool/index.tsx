@@ -25,6 +25,7 @@ export default function OwnedObjectsPage() {
   const [totalNFTs, setTotalNFTs] = useState(0);
   const [totalAirdrops, setTotalAirdrops] = useState(0);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
   const loadingMessages = [
     "Loading your Rootlets...",
     "Wow you have a lot of NFTs! Give us a sec to fetch them all.",
@@ -33,6 +34,7 @@ export default function OwnedObjectsPage() {
 
   type NFT = {
     id: string;
+    listing: unknown;
     owner: {
       kiosk_id: string;
       personal_kiosk_cap_id: string;
@@ -328,6 +330,7 @@ export default function OwnedObjectsPage() {
           if (obj.type === ROOTLET_TYPE) {
             const nft: NFT = {
               id: obj.objectId,
+              listing: obj.listing,
               owner: {
                 kiosk_id: obj.kioskId,
                 personal_kiosk_cap_id: kioskData.kioskOwnerCap.objectId,
@@ -341,7 +344,13 @@ export default function OwnedObjectsPage() {
       // claim all tokens from each rootlet
       for (const nft of nfts) {
         const thisNft = nft;
-
+        if (thisNft.listing !== undefined) {
+          toast.info(
+            "Some of your Rootlets are listed, we will only claim from unlisted ones.",
+          );
+          console.log("NFT is listed, skipping...");
+          continue;
+        }
         const personal_kiosk_package_id = kioskClient.getRulePackageId(
           "personalKioskRulePackageId",
         );
@@ -518,7 +527,10 @@ export default function OwnedObjectsPage() {
               (rootlet) => rootlet.data.objectId === obj.objectId,
             );
             if (!alreadyExists) {
-              newRootlets.push(obj);
+              newRootlets.push({
+                ...obj,
+                listing: obj.listing ?? undefined, // Include listing attribute
+              });
             }
           }
         }
@@ -534,8 +546,15 @@ export default function OwnedObjectsPage() {
   };
 
   const openModal = async (obj: SuiObjectResponse) => {
-    setSelectedObject(obj);
+    const rootletWithListing = ownedRootlets.find(
+      (rootlet) => rootlet.data.objectId === obj.data?.objectId,
+    );
+    setSelectedObject({
+      ...obj,
+      listing: rootletWithListing?.listing ?? undefined, // Include listing
+    });
     setModalVisible(true);
+
     // Fetch owned objects associated with this NFT when modal opens
     await getOwnedObjectsFromNFT(obj);
   };
@@ -710,6 +729,24 @@ export default function OwnedObjectsPage() {
             </div>
 
             <h2 className="mb-4 text-xl font-bold text-white">NFT Details</h2>
+            <p>
+              <strong className="text-white">
+                This NFT owns the following:
+              </strong>
+              <span className="block w-full truncate text-white">
+                {ownedObjects.length > 0
+                  ? ownedObjects
+                      .map((obj) => {
+                        const typeParts = obj?.data?.type?.split("::") || [];
+                        return (
+                          typeParts[typeParts.length - 1]?.replace(">", "") ||
+                          ""
+                        );
+                      })
+                      .join(", ")
+                  : "Nothing found."}
+              </span>
+            </p>
 
             <p>
               <strong className="text-white">Object ID:</strong>
@@ -770,7 +807,11 @@ export default function OwnedObjectsPage() {
 
             <div className="mt-4 flex justify-center">
               <div className="mr-4 mt-4">
-                {ownedObjects.length > 0 ? (
+                {selectedObject?.listing !== undefined ? (
+                  <Button disabled className="cursor-not-allowed opacity-50">
+                    Please unlist your NFT
+                  </Button>
+                ) : (
                   <Button
                     onClick={() =>
                       receiveTokens(
@@ -780,10 +821,6 @@ export default function OwnedObjectsPage() {
                     }
                   >
                     Claim airdrops
-                  </Button>
-                ) : (
-                  <Button disabled className="cursor-not-allowed opacity-50">
-                    Nothing to claim
                   </Button>
                 )}
               </div>
