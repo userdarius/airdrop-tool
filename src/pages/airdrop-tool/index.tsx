@@ -607,8 +607,8 @@ export default function OwnedObjectsPage() {
           </Button>
         )}
         {rootletMetadata.length > 0 && (
-          <Button onClick={fetchOwnedRootlets} disabled={isLoading}>
-            {isLoading ? "Loading..." : "Refresh"}
+          <Button onClick={() => window.location.reload()} disabled={isLoading}>
+            Refresh
           </Button>
         )}
         {nftCount > 1 && (
