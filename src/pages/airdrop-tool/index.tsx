@@ -7,6 +7,10 @@ import { KioskItem, KioskOwnerCap } from "@mysten/kiosk";
 import { Transaction } from "@mysten/sui/transactions";
 import { SuiObjectResponse } from "@mysten/sui/client";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer } from "react-toastify";
+
 
 export default function OwnedObjectsPage() {
   const walletKit = useWalletKit();
@@ -574,6 +578,7 @@ export default function OwnedObjectsPage() {
       <Head>
         <title>Rootlets airdrop tool</title>
       </Head>
+      <ToastContainer />
       <h1 className="mb-4 text-2xl font-bold">
         Claim airdrops sent to your Rootlets
       </h1>
@@ -660,30 +665,19 @@ export default function OwnedObjectsPage() {
             <h2 className="mb-4 text-xl font-bold text-white">NFT Details</h2>
 
             <p>
-              <strong className="text-white">
-                This NFT owns the following:
-              </strong>
-              <span className="block w-full truncate text-white">
-                {ownedObjects.length > 0
-                  ? ownedObjects
-                      .map((obj) => {
-                        const typeParts = obj?.data?.type?.split("::") || [];
-                        return (
-                          typeParts[typeParts.length - 1]?.replace(">", "") ||
-                          ""
-                        );
-                      })
-                      .join(", ")
-                  : "Nothing found."}
-              </span>
-            </p>
-
-            <p>
               <strong className="text-white">Object ID:</strong>
-              <span className="block w-full truncate text-white">
+              <span
+                className="block w-full cursor-pointer truncate text-white"
+                onClick={() => {
+                  navigator.clipboard.writeText(selectedObject.data.objectId);
+                  toast.success("Object ID copied to clipboard!");
+                }}
+                title="Click to copy"
+              >
                 {selectedObject.data.objectId}
               </span>
             </p>
+
             <p>
               <strong className="text-white">Digest:</strong>
               <span className="block w-full truncate text-white">
