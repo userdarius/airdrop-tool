@@ -197,6 +197,7 @@ export default function OwnedObjectsPage() {
           if (obj.type === ROOTLET_TYPE) {
             const nft: NFT = {
               id: obj.objectId,
+              listing: obj.listing,
               owner: {
                 kiosk_id: obj.kioskId,
                 personal_kiosk_cap_id: kioskData.kioskOwnerCap.objectId,
